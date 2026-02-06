@@ -28,9 +28,13 @@ try:
         print("=" * 60)
         print("IP:", ip)
         print("HTML snippet:", html[:300])  # 防止太长
-        match = re.search(r'([\w-]+)\.nodes\.gen4\.ninja:9002', html)
+        match = re.search(r'([^"\s<>]+)\.nodes\.gen4\.ninja:9002', html)
         if match and ip:
             node_name = match.group(1)
+            # 去重：如果已存在同名节点则跳过
+            if node_name in proxy_names:
+                print(f"[-] 跳过重复节点: {node_name} -> {ip}")
+                continue
             # 构建单个代理节点配置
             proxy_item = {
                 "name": node_name,

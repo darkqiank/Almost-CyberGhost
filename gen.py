@@ -2,6 +2,10 @@ import shodan
 import os
 import re
 import yaml
+from geoip2.database import Reader
+from geoip2.errors import AddressNotFoundError
+
+DB_PATH = "GeoLite2-Country.mmdb"
 
 API_KEY = os.getenv("SHODAN_API_KEY")
 
@@ -11,6 +15,22 @@ query = 'http.html:"nodes.gen4.ninja"'
 
 proxies = []
 proxy_names = []
+
+def ip_to_country(ip: str):
+    with Reader(DB_PATH) as reader:
+        try:
+            resp = reader.country(ip)
+            # ISO 国家码（CN/US/JP...）
+            iso = resp.country.iso_code
+            return iso
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
+
+def iso_to_flag(iso_code: str) -> str:
+    if not iso_code or len(iso_code) != 2:
+        return ""
+    return ''.join(chr(ord(c.upper()) + 127397) for c in iso_code)
 
 try:
     count = 0
@@ -35,7 +55,11 @@ try:
             if node_name in proxy_names:
                 print(f"[-] 跳过重复节点: {node_name} -> {ip}")
                 continue
+            country = ip_to_country(ip)
+            if country:
+                country_flag = f"{iso_to_flag(country)}"
             # 构建单个代理节点配置
+            node_name = f"{country_flag} {country}-{node_name}"
             proxy_item = {
                 "name": node_name,
                 "type": "http",
